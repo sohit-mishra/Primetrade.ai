@@ -23,20 +23,20 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(localStorage.getItem('token') || null);
+  const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    const initializeAuth = async () => {
+    if (typeof window !== "undefined") {
       const savedToken = localStorage.getItem("token");
-      if (!savedToken) {
+      if (savedToken) {
+        setToken(savedToken);
+        fetchUser(savedToken);
+      } else {
         setLoading(false);
-        return;
       }
-      await fetchUser(savedToken);
-    };
-    initializeAuth();
+    }
   }, []);
 
   const fetchUser = async (token: string) => {
@@ -50,7 +50,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(res.data.user || res.data);
     } catch (err) {
       setUser(null);
-      localStorage.removeItem("token");
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("token");
+      }
       router.replace("/login");
     } finally {
       setLoading(false);
@@ -59,10 +61,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const handleSetToken = (newToken: string | null) => {
     setToken(newToken);
-    if (newToken) {
-      localStorage.setItem("token", newToken);
-    } else {
-      localStorage.removeItem("token");
+    if (typeof window !== "undefined") {
+      if (newToken) {
+        localStorage.setItem("token", newToken);
+      } else {
+        localStorage.removeItem("token");
+      }
     }
   };
 
@@ -85,7 +89,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-50 dark:bg-black text-gray-700 dark:text-gray-300">
-        <div className="animate-pulse text-xl font-medium"></div>
+        <div className="animate-pulse text-xl font-medium">Loading...</div>
       </div>
     );
   }
